@@ -1,0 +1,139 @@
+import random
+import time
+
+# Model parameters
+target_value = 4  # Target value
+learning_rate_value = 1  # Learning rate
+
+# Additional parameters (you can disable some of them)
+improvement_by_error = True  # Improvements by error
+communication_enabled = True  # Enable/disable communication
+adaptivity_enabled = True  # Enable/disable adaptivity (from version 1, helps with quick adaptation when the target changes in a loop, helps to immediately adjust the input of the best number, helps to lock onto the target, removes significance when outputting the best number for another neuron)
+reverse_adaptivity_enabled = True  # Enable/disable reverse adaptivity (from version 2, same as from version 1 but opposite in distance)
+
+# Initialization
+best_number = 0  # Initialize with the best number (can be changed)
+errorD = 0
+errorU = 0
+error = 0
+dist = 0
+old_dist = 0
+out_best = 0
+
+# 5.2.1. Information acquisition
+inp_exist = False  # Isolation
+inp_target = 2
+inp_best = 1.9
+inp_tru = False
+
+# Adaptive helper initialization
+adaptation = 0
+adaptation_reversed = 0
+
+# Additional functions initialization
+def adapt_round(value, count):
+    return round(value * (10 ** count)) / (10 ** count)
+
+def negate_divide(value):
+    if value < 1 and value > -1:
+        return 1 / value
+    else:
+        return value
+
+# Main loop
+while True:
+    
+    # 1. Generating a random number
+    b = random.uniform(errorD, (target_value * 2) - errorU)
+    # 2. Updating "speed"
+    
+    speed = 1 / (abs(target_value - b) * (1 / learning_rate_value))
+    
+    # 3. Updating the best number
+    if best_number < speed:
+        adaptation = best_number  # Update adaptive helper
+        best_number = b
+        print(f"Found best number: {best_number:.2f}")
+        out_tru = True
+    else:
+        error = b
+        print(f"Found error number: {b:.2f}")
+        out_tru = False
+        
+    # 4. Updating range boundaries
+    if improvement_by_error:
+        if error < b:
+            errorD = error
+        else:
+            errorU = error
+    else:
+        errorU = target_value * 2
+        
+    # 5. Information exchange
+    if communication_enabled:
+        # 5.1. Giving information
+        old_dist = dist
+        dist = negate_divide(target_value / best_number)
+        if dist < old_dist:
+            out_best = best_number
+        out_exist = True
+        out_target = target_value
+        # 5.2. Receiving information
+        if inp_exist:  # If connection exists
+            if not inp_target == 0:  # Anti division by zero
+                ratio = negate_divide(max(0, target_value / inp_target))
+                ratio_dist = negate_divide(inp_best * ratio)
+                target_dist = negate_divide(target_value / best_number)
+                if ratio_dist / target_value < target_dist:  # If another neuron has a better best number
+                    if inp_tru:  # And if it is changing
+                        adaptation = best_number  # Update adaptive helper
+                        best_number = ratio_dist
+                        print(f"Neuron received a better number from another neuron: {best_number:.2f}")
+    else:
+        out_tru = False
+        
+    # 6. Calculating adaptive helper
+    if adaptivity_enabled:
+        if adaptation != 0:  # Safety for division by zero
+            adaptation_dist = negate_divide(target_value / adaptation)
+        else:
+            adaptation_dist = float('inf')  # If adaptation is 0, set to infinity
+    else:
+        adaptation_dist = float('inf')
+    best_dist = negate_divide(target_value / best_number)
+    
+    # 7. Calculating reverse adaptive helper
+    if reverse_adaptivity_enabled:
+        if adaptation_reversed != 0:  # Safety for division by zero
+            adaptation_reversed_dist = negate_divide(target_value / adaptation_reversed)
+        else:
+            adaptation_reversed_dist = float('inf')  # If adaptation_reversed is 0, set to infinity
+    else:
+        adaptation_reversed_dist = float('inf')
+
+    # 8. Comparing distances and updating the best number
+    if adaptation_reversed_dist - 1 < best_dist - 1 and adaptation_reversed_dist - 1 < adaptation_dist - 1:
+        best_number = adaptation_reversed
+        print(f"Reverse adaptive helper improved the best number: {best_number:.2f}")
+    elif adaptation_dist - 1 < best_dist - 1:
+        best_number = adaptation
+        print(f"Adaptive helper improved the best number: {best_number:.2f}")
+    accur = 1 - abs(1 - (1 / (target_value / best_number)))
+    1
+    # 9. Output additional data
+    print(f"Understanding/adaptation strength: {speed:.3f}")
+    print(f"Accuracy: {accur * 100:.2f}%")
+    print(f"Current best number: {best_number:.2f}")
+    
+    # 10. Output variable values for another neuron
+    print(f"Connection existence state for another neuron: {out_exist}")
+    print(f"Target for another neuron: {out_target}")
+    print(f"Output best number for another neuron: {out_best:.2f}")
+    print(f"Did the neuron change the best number: {out_tru}")
+    
+    # 11. Debugging error boundary calculation
+    print(f"Lower error: {errorD:.2f}")
+    print(f"Upper error: {errorU:.2f}")
+    
+    # 12. Delay to prevent overload
+    time.sleep(0.01666)
